@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+	<title>sprintf Test Suite</title>
+	<link rel="stylesheet" type="text/css" href="test.css"/>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+	<script type="text/javascript" src="../sprintf.js"></script>
+	<script type="text/javascript">
+
+var Tester = (function ()
+{
+	var container = null;
+	var currentSuite = null;
+	
+	var stats = {
+		testsSucceeded: 0,
+		testsFailed: 0,
+		testsTotal: 0,
+		suitesSucceded: 0,
+		suitesFailed: 0,
+		suitesTotal: 0
+	};
+	
+	var self;
+	return self = {
+		runSuite: function (name, testFunction)
+		{
+			if (!container) container = $(document.body);
+		
+			currentSuite = $('<div class="suite"></div>');
+			$('<h1></h1>').text(name).appendTo(currentSuite);
+			$('<div class="tests"></div>').appendTo(currentSuite);
+			
+			var previousTotal = stats.testsTotal;
+			var previousSucceeded = stats.testsSucceeded;
+			
+			// Run suite
+			testFunction.apply(this, []);
+			
+			var suiteTestsTotal = stats.testsTotal - previousTotal;
+			var suiteTestsSucceeded = stats.testsSucceeded - previousSucceeded;
+			
+			// Print out suite result
+			var suiteResultEl = $('<span class="suiteResult"></span>');
+			if (suiteTestsTotal == suiteTestsSucceeded) {
+				stats.suitesSucceeded++;
+				currentSuite.addClass('success');
+				suiteResultEl.text(" "+suiteTestsSucceeded+"/"+suiteTestsTotal);
+			} else {
+				stats.suitesFailed++;
+				currentSuite.addClass('error');
+				suiteResultEl.text(" "+suiteTestsSucceeded+"/"+suiteTestsTotal+' FAIL');
+			}
+			suiteResultEl.appendTo(currentSuite.find('h1'));
+			
+			stats.suitesTotal;
+			$(container).append(currentSuite);
+			currentSuite = null;
+		},
+		runTest: function (name, expectedResult, f, args)
+		{
+			if (!container) container = $(document.body);
+			var targetEl = (currentSuite) ? currentSuite.find('.tests') : container;
+			
+			var testEl = $('<div class="test"></div>');
+			$('<span class="name"></span>').text(name).appendTo(testEl);
+			
+			try {
+				var result = f.apply(null, args);
+				
+				if (result != expectedResult) {
+					throw new Error('Wrong result. Expected: '+expectedResult+' Actual: '+result);
+				} else {
+					$('<span class="result success"></span>').text(' OK').appendTo(testEl);
+					stats.testsSucceeded++;
+				}
+			} catch(e) {
+				$('<span class="result error"></span>').text(' '+e.toString()).appendTo(testEl);
+				stats.testsFailed++;
+			}
+			
+			stats.testsTotal++;
+			targetEl.append(testEl);
+		},
+		report: function ()
+		{
+			
+		}
+	};
+})();
+
+$(function () {
+	Tester.runSuite('Basic Features', function () {
+		var s = 'Test String Passthrough';
+		
+		//           Name of test             Expected result               Fn       Arguments
+		this.runTest('String Passthrough'   , 'Test String Passthrough'   , sprintf, [s]);
+		this.runTest('String Insert'        , 'Test String Passthrough'   , sprintf, ['%s', s]);
+		this.runTest('Standard int'         , '43951789'                  , sprintf, ['%d', 43951789]);
+		this.runTest('Escape percent sign'  , '%'                         , sprintf, ['%%']);
+		this.runTest('Escape percent signs' , '%%'                        , sprintf, ['%%%%']);
+	});
+	
+	Tester.runSuite('Numerical Output', function () {
+		//           Name of test             Expected result               Fn       Arguments
+		this.runTest('Binary representation', '10100111101010011010101101', sprintf, ['%b', 43951789]);
+		this.runTest('ASCII chr'            , 'A'                         , sprintf, ['%c', 65]);
+		this.runTest('Standard int'         , '43951789'                  , sprintf, ['%d', 43951789]);
+		this.runTest('Scientific'           , '4.39518e+7'                , sprintf, ['%e', 43951789]);
+		this.runTest('Unsigned pos'         , '43951789'                  , sprintf, ['%u', 43951789]);
+		this.runTest('Unsigned neg'         , '4251015507'                , sprintf, ['%u', -43951789]);
+		this.runTest('Floating'             , '43951789.000000'           , sprintf, ['%f', 43951789]);
+		this.runTest('Octal'                , '247523255'                 , sprintf, ['%o', 43951789]);
+		this.runTest('String'               , '43951789'                  , sprintf, ['%s', 43951789]);
+		this.runTest('Hex (lower-case)'     , '29ea6ad'                   , sprintf, ['%x', 43951789]);
+		this.runTest('Hex (upper-case)'     , '29EA6AD'                   , sprintf, ['%X', 43951789]);
+		this.runTest('Sign spec (pos)'      , '+43951789'                 , sprintf, ['%+d', 43951789]);
+		this.runTest('Sign spec (neg)'      , '-43951789'                 , sprintf, ['%+d', -43951789]);
+	});
+	
+	Tester.runSuite('String Specifiers', function () {
+		var s = 'monkey';
+		var t = 'many monkeys';
+		
+		//           Name of test             Expected result               Fn       Arguments
+		this.runTest('Standard output'      , '[monkey]'                  , sprintf, ['[%s]', s]);
+		this.runTest('Right-just. w/ spaces', '[    monkey]'              , sprintf, ['[%10s]', s]);
+		this.runTest('Left-just w/ spaces'  , '[monkey    ]'              , sprintf, ['[%-10s]', s]);
+		this.runTest('Zero-padding'         , '[0000monkey]'              , sprintf, ['[%010s]', s]);
+		this.runTest('Custom padding'       , '[####monkey]'              , sprintf, ['[%\'#10s]', s]);
+		this.runTest('Left-just w/ cutoff'  , '[many monke]'              , sprintf, ['[%10.10s]', t]);
+	});
+	
+	Tester.report();
+});
+
+	</script>
+</head>
+<body></body>
+</html>
+
